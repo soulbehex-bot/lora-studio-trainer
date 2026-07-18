@@ -11,9 +11,14 @@ RUN git clone https://github.com/ostris/ai-toolkit.git && \
     cd ai-toolkit && \
     git submodule update --init --recursive
 
-# python deps: ai-toolkit's own requirements + the runpod SDK + pyyaml/hf
-RUN cd ai-toolkit && pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir runpod huggingface_hub pyyaml
+# python deps: ai-toolkit's requirements MINUS torch/vision/audio (the base image
+# already ships them; letting ai-toolkit reinstall torch roughly doubled the
+# image size and made cold starts unusable). Then the runpod SDK + pyyaml/hf.
+RUN cd ai-toolkit && \
+    sed -i -E '/^(torch|torchvision|torchaudio)([<>=~! ]|$)/d' requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir runpod huggingface_hub pyyaml && \
+    pip cache purge || true
 
 # The Wan 2.2 14B model (ai-toolkit/Wan2.2-T2V-A14B-Diffusers-bf16) and the uint4
 # accuracy-recovery adapter download on the first job into the HF cache and are
